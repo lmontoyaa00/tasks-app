@@ -42,6 +42,12 @@ export function createDemoBackend(today) {
   add('TSR', 'Laboratorio ZeroMQ (1 h 15 min)', 0);
   add('TSR', 'Cuestionario tema 5 (25 min)', 12);
 
+  const note = (title, notes) => { tasks.find(t => t.title.includes(title)).notes = notes; };
+  note('Práctica 2', 'Entrega por PoliformaT antes de las 23:59.\nEnunciado: https://example.com/bda/practica2.pdf\nHay que incluir el script .sql y capturas de los resultados.');
+  note('Entrega OpenMP', 'Medir speedup con 1, 2, 4 y 8 hilos y adjuntar la gráfica.');
+  note('Ejercicios 1-4', 'JOIN y subconsultas.');
+  note('Reunión con el tutor', 'Despacho 2D14. Llevar el índice provisional.');
+
   const json = (status, body) => ({ status, body });
   const pub = t => { const { listId, ...rest } = t; return rest; };
 

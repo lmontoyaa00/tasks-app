@@ -12,6 +12,7 @@ const REFRESH_MS = 90_000;
 const VIEW_TITLES = { today: 'Hoy y atrasadas', week: 'Próximos 7 días', subjects: 'Por asignatura', nodate: 'Sin fecha' };
 
 const $ = s => document.querySelector(s);
+const linkify = s => esc(s).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const readJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
 const writeJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin espacio */ } };
@@ -127,7 +128,7 @@ async function allPages(path) {
 }
 
 const taskPath = t => `/lists/${encodeURIComponent(t.listId)}/tasks/${encodeURIComponent(t.id)}`;
-const norm = (t, listId) => ({ id: t.id, listId, title: t.title || '', due: t.due, parent: t.parent, position: t.position || '', status: t.status });
+const norm = (t, listId) => ({ id: t.id, listId, title: t.title || '', notes: t.notes || '', due: t.due, parent: t.parent, position: t.position || '', status: t.status });
 
 async function pool(items, n, fn) {
   const queue = [...items];
@@ -292,10 +293,12 @@ function rowHtml(row, today, sub) {
         <div class="meta">
           ${isPriority(t.title) ? '<span class="chip bolt" title="Prioridad">⚡</span>' : ''}
           ${mins ? `<span class="chip">${fmtMinutes(mins)}</span>` : ''}
+          ${t.notes ? '<span class="chip note" title="Tiene descripción">≡</span>' : ''}
           ${ch.length && collapsed ? `<span class="chip">${ch.length} subtarea${ch.length > 1 ? 's' : ''}</span>` : ''}
           <button class="chip date ${dateCls}" data-act="date" title="Cambiar fecha (d)">${day ? esc(fmtDate(day, today)) : '+ fecha'}</button>
           ${sub ? '' : `<span class="tag" style="--c:${color}">${esc(list?.title || '')}</span>`}
         </div>
+        ${t.notes ? `<div class="notes">${linkify(t.notes.trim())}</div>` : ''}
       </div>
     </div>
     ${ch.length && !collapsed ? `<div class="children">${ch.map(c => rowHtml({ task: c }, today, true)).join('')}</div>` : ''}
@@ -440,6 +443,8 @@ function bind() {
     const id = el.dataset.id;
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'done') return completeTask(id);
+    // Pulsar una tarea la enfoca y muestra su descripción; pulsarla otra vez la cierra.
+    if (!act && id === selected) { if (!e.target.closest('.notes')) select(null); return; }
     select(id);
     if (act === 'toggle') toggleCollapsed(id);
     else if (act === 'date') openDateDialog(id);
@@ -488,6 +493,7 @@ function bind() {
       j: () => move(1), ArrowDown: () => move(1),
       k: () => move(-1), ArrowUp: () => move(-1),
       x: () => selected && completeTask(selected),
+      Escape: () => select(null),
       r: () => refresh(true),
       f: () => $('#filterBtn').click(),
       d: () => selected && openDateDialog(selected),
